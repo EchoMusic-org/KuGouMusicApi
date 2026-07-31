@@ -19,24 +19,19 @@ const appendCloudQuality = async (respone, params, useAxios) => {
   const token = params?.token || params?.cookie?.token;
   if (!userid || !token) return;
 
-  // 分页拉取云盘列表（默认最多 5 页 × 60 条，匹配到即提前返回）
+  // 分页拉取云盘列表（默认最多 5 页 × 60 条），匹配到即提前返回
   const maxPages = Number(params?.cloud_pages ?? 5);
   const pagesize = Number(params?.cloud_pagesize ?? 60);
-  let list = [];
+  let file = null;
   for (let page = 1; page <= maxPages; page++) {
     const cloud = await getUserCloud({ page, pagesize, cookie: params?.cookie }, useAxios);
     const items = cloud?.body?.data?.list || [];
     if (!items.length) break;
-    const match = matchCloudFile(items, song);
-    if (match) {
-      list = [match];
-      break;
-    }
-    list = list.concat(items);
+    file = matchCloudFile(items, song);
+    if (file) break;
   }
-  if (!list.length) return;
-
-  const file = list[0];
+  // 无匹配文件时不追加云盘音质
+  if (!file) return;
   // 去重：已存在 quality='cloud' 的条目则跳过（云盘文件 hash 可能与曲库某音质 hash 相同，不以此去重）
   if (goods.some((g) => g.quality === 'cloud')) {
     return;
